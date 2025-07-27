@@ -1,0 +1,136 @@
+security:
+    enable_authenticator_manager: true
+    
+    # 🚪 HIÉRARCHIE RÔLES API GATEWAY
+    role_hierarchy:
+        ROLE_USER:                    []
+        ROLE_API_CLIENT:              [ROLE_USER]
+        ROLE_GATEWAY_USER:            [ROLE_USER, ROLE_API_CLIENT]
+        ROLE_MICROSERVICE_CONSUMER:   [ROLE_USER, ROLE_GATEWAY_USER]
+        ROLE_SERVICE_MESH_NODE:       [ROLE_USER, ROLE_MICROSERVICE_CONSUMER]
+        ROLE_LOAD_BALANCER:           [ROLE_USER, ROLE_SERVICE_MESH_NODE]
+        ROLE_CIRCUIT_BREAKER:         [ROLE_USER, ROLE_SERVICE_MESH_NODE]
+        ROLE_ROUTE_MANAGER:           [ROLE_USER, ROLE_GATEWAY_USER]
+        ROLE_HEALTH_MONITOR:          [ROLE_USER, ROLE_ROUTE_MANAGER]
+        ROLE_TRAFFIC_ANALYZER:        [ROLE_USER, ROLE_HEALTH_MONITOR]
+        ROLE_GATEWAY_ADMIN:           [ROLE_USER, ROLE_TRAFFIC_ANALYZER, ROLE_LOAD_BALANCER]
+        ROLE_API_CONSUMER:            [ROLE_USER]
+        ROLE_WEBHOOK_RECEIVER:        [ROLE_SYSTEM]
+        ROLE_SERVICE_DISCOVERY_AGENT: [ROLE_SYSTEM]
+        ROLE_FAILOVER_AGENT:          [ROLE_SYSTEM]
+        ROLE_ADMIN:                   [ROLE_USER, ROLE_GATEWAY_ADMIN]
+        ROLE_SUPER_ADMIN:             [ROLE_ADMIN, ROLE_ALLOWED_TO_SWITCH]
+        ROLE_SYSTEM:                  [ROLE_ADMIN]
+
+    # 🔑 HASHAGE SÉCURISÉ
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+            algorithm: 'sodium'
+            migrate_from: ['bcrypt']
+
+    # 👥 PROVIDERS AUTHENTIFICATION
+    providers:
+        jwt_users:
+            jwt: ~
+        oauth2_users:
+            oauth2: ~
+        api_key_users:
+            entity:
+                class: ApiGateway\Infrastructure\Security\ApiKeyUser
+                property: key
+        service_discovery_users:
+            memory:
+                users:
+                    service_discovery: { password: '%env(SERVICE_DISCOVERY_SECRET)%', roles: [ROLE_SERVICE_DISCOVERY_AGENT] }
+        failover_users:
+            memory:
+                users:
+                    failover_agent: { password: '%env(FAILOVER_AGENT_SECRET)%', roles: [ROLE_FAILOVER_AGENT] }
+        webhook_users:
+            memory:
+                users:
+                    webhook_receiver: { password: '%env(WEBHOOK_RECEIVER_SECRET)%', roles: [ROLE_WEBHOOK_RECEIVER] }
+
+    # 🛡️ FIREWALLS
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+        health:
+            pattern: ^/(health|ready|metrics|alive)
+            security: false
+
+        service_discovery:
+            pattern: ^/gateway/discovery
+            stateless: true
+            custom_authenticators:
+                - ApiGateway\Infrastructure\Security\ServiceDiscoveryAuthenticator
+            entry_point: ApiGateway\Infrastructure\Security\ServiceDiscoveryAuthenticator
+
+        failover:
+            pattern: ^/gateway/failover
+            stateless: true
+            custom_authenticators:
+                - ApiGateway\Infrastructure\Security\FailoverAuthenticator
+            entry_point: ApiGateway\Infrastructure\Security\FailoverAuthenticator
+
+        webhooks:
+            pattern: ^/gateway/webhooks
+            stateless: true
+            custom_authenticators:
+                - ApiGateway\Infrastructure\Security\WebhookAuthenticator
+            entry_point: ApiGateway\Infrastructure\Security\WebhookAuthenticator
+
+        oauth2:
+            pattern: ^/oauth
+            stateless: true
+            custom_authenticators:
+                - ApiGateway\Infrastructure\Security\OAuth2Authenticator
+            entry_point: ApiGateway\Infrastructure\Security\OAuth2Authenticator
+
+        api_routes:
+            pattern: ^/api
+            stateless: true
+            custom_authenticators:
+                - lexik_jwt_authentication.jwt_token_authenticator
+                - ApiGateway\Infrastructure\Security\ApiKeyAuthenticator
+                - ApiGateway\Infrastructure\Security\OAuth2BearerAuthenticator
+            entry_point: lexik_jwt_authentication.jwt_token_authenticator
+
+        main:
+            lazy: true
+            provider: jwt_users
+            custom_authenticators:
+                - lexik_jwt_authentication.jwt_token_authenticator
+            entry_point: lexik_jwt_authentication.jwt_token_authenticator
+
+    # 🚫 CONTRÔLE ACCÈS GLOBAL
+    access_control:
+        - { path: ^/(health|ready|metrics|alive), roles: PUBLIC_ACCESS }
+        - { path: ^/gateway/discovery, roles: [ROLE_SERVICE_DISCOVERY_AGENT, ROLE_SYSTEM] }
+        - { path: ^/gateway/failover, roles: [ROLE_FAILOVER_AGENT, ROLE_SYSTEM] }
+        - { path: ^/gateway/webhooks, roles: [ROLE_WEBHOOK_RECEIVER, ROLE_SYSTEM] }
+        - { path: ^/oauth, roles: [ROLE_API_CLIENT, ROLE_SYSTEM] }
+        - { path: ^/api/v1/users, roles: [ROLE_GATEWAY_USER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/security, roles: [ROLE_GATEWAY_USER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/workflow, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/analytics, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/integration, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/billing, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/messaging, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/content, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/storage, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/reporting, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/marketing, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/location, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/feed, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/support, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/events, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/recommendations, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/api/v1/moderation, roles: [ROLE_MICROSERVICE_CONSUMER, ROLE_SYSTEM] }
+        - { path: ^/gateway/admin, roles: ROLE_ADMIN }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+    access_decision_manager:
+        strategy: unanimous 

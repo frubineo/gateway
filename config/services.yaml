@@ -1,0 +1,192 @@
+# 🚪 MÉTRIQUES PROMETHEUS API GATEWAY
+services:
+    # 🔧 COLLECTEUR PRINCIPAL
+    ApiGateway\Infrastructure\Monitoring\PrometheusCollector:
+        arguments:
+            $registry: '@prometheus_registry'
+        tags:
+            - { name: 'kernel.event_subscriber' }
+
+    # 📈 REGISTRY PROMETHEUS
+    prometheus_registry:
+        class: Prometheus\CollectorRegistry
+        factory: ['Prometheus\CollectorRegistry', 'getDefault']
+
+    # 🚪 MÉTRIQUES GATEWAY
+    gateway_metrics:
+        class: ApiGateway\Infrastructure\Monitoring\GatewayMetrics
+        arguments:
+            $registry: '@prometheus_registry'
+
+    # 🔀 MÉTRIQUES ROUTING
+    routing_metrics:
+        class: ApiGateway\Infrastructure\Monitoring\RoutingMetrics
+        arguments:
+            $registry: '@prometheus_registry'
+
+    # ⚖️ MÉTRIQUES LOAD BALANCING
+    load_balancer_metrics:
+        class: ApiGateway\Infrastructure\Monitoring\LoadBalancerMetrics
+        arguments:
+            $registry: '@prometheus_registry'
+
+# 🚪 MÉTRIQUES API GATEWAY CENTRAL
+api_gateway:
+    metrics:
+        routing:
+            requests_routed_total:
+                type: counter
+                help: "Requêtes routées par microservice"
+                labels: ['microservice', 'method', 'status_code', 'client_type']
+            
+            routing_latency_ms:
+                type: histogram
+                help: "Latence de routage Gateway"
+                buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000]
+                labels: ['microservice', 'route_type']
+            
+            route_resolution_time_ms:
+                type: histogram
+                help: "Temps de résolution des routes"
+                buckets: [0.1, 0.5, 1, 2, 5, 10]
+                labels: ['resolution_method', 'cache_hit']
+            
+            active_routes:
+                type: gauge
+                help: "Routes actives par microservice"
+                labels: ['microservice', 'health_status']
+
+        load_balancing:
+            load_balancer_requests_total:
+                type: counter
+                help: "Requêtes load balancées"
+                labels: ['algorithm', 'target_instance', 'success']
+            
+            instance_health_status:
+                type: gauge
+                help: "Statut santé des instances (1=healthy, 0=unhealthy)"
+                labels: ['microservice', 'instance_id', 'region']
+            
+            load_distribution:
+                type: gauge
+                help: "Distribution de charge par instance (%)"
+                labels: ['microservice', 'instance_id']
+            
+            failover_events_total:
+                type: counter
+                help: "Événements de failover"
+                labels: ['from_instance', 'to_instance', 'reason']
+
+        circuit_breaker:
+            circuit_breaker_state:
+                type: gauge
+                help: "État circuit breaker (0=closed, 1=open, 2=half-open)"
+                labels: ['microservice', 'endpoint']
+            
+            circuit_breaker_trips_total:
+                type: counter
+                help: "Déclenchements circuit breaker"
+                labels: ['microservice', 'trigger_reason']
+            
+            circuit_breaker_recovery_time_seconds:
+                type: histogram
+                help: "Temps de récupération circuit breaker"
+                buckets: [1, 5, 15, 30, 60, 300]
+                labels: ['microservice', 'recovery_method']
+
+        authentication:
+            auth_requests_total:
+                type: counter
+                help: "Requêtes d'authentification"
+                labels: ['auth_method', 'result', 'client_type']
+            
+            token_validations_total:
+                type: counter
+                help: "Validations de tokens"
+                labels: ['token_type', 'validity', 'issuer']
+            
+            auth_latency_ms:
+                type: histogram
+                help: "Latence d'authentification"
+                buckets: [1, 5, 10, 25, 50, 100, 250]
+                labels: ['auth_method', 'provider']
+            
+            active_sessions:
+                type: gauge
+                help: "Sessions actives"
+                labels: ['session_type', 'user_tier']
+
+        performance:
+            response_time_percentiles_ms:
+                type: histogram
+                help: "Temps de réponse par percentile"
+                buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2000]
+                labels: ['microservice', 'endpoint_type']
+            
+            throughput_requests_per_second:
+                type: gauge
+                help: "Débit en requêtes/seconde"
+                labels: ['microservice', 'time_window']
+            
+            concurrent_connections:
+                type: gauge
+                help: "Connexions concurrentes"
+                labels: ['connection_type', 'protocol']
+            
+            bandwidth_bytes_per_second:
+                type: gauge
+                help: "Bande passante en bytes/sec"
+                labels: ['direction', 'microservice']
+
+        caching:
+            cache_hit_ratio:
+                type: gauge
+                help: "Taux de cache hit (%)"
+                labels: ['cache_type', 'microservice']
+            
+            cache_operations_total:
+                type: counter
+                help: "Opérations de cache"
+                labels: ['operation', 'cache_layer', 'result']
+            
+            cache_evictions_total:
+                type: counter
+                help: "Évictions de cache"
+                labels: ['eviction_reason', 'cache_type']
+
+        security:
+            security_events_total:
+                type: counter
+                help: "Événements de sécurité"
+                labels: ['event_type', 'severity', 'source_ip']
+            
+            rate_limit_hits_total:
+                type: counter
+                help: "Dépassements de rate limit"
+                labels: ['limiter_type', 'client_id', 'action']
+            
+            blocked_requests_total:
+                type: counter
+                help: "Requêtes bloquées"
+                labels: ['block_reason', 'source', 'rule_id']
+            
+            ddos_detection_score:
+                type: gauge
+                help: "Score de détection DDoS"
+                labels: ['detection_method', 'threat_level']
+
+        business:
+            api_usage_by_client:
+                type: counter
+                help: "Utilisation API par client"
+                labels: ['client_id', 'subscription_tier', 'microservice']
+            
+            revenue_impact_score:
+                type: gauge
+                help: "Score d'impact sur le revenu"
+                labels: ['microservice', 'client_tier']
+            
+            sla_compliance:
+                type: gauge
+                help: "Conformité SLA (%)"
+                labels: ['sla_tier', 'metric_type'] 

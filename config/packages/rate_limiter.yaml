@@ -1,0 +1,168 @@
+# 🚪 RATE LIMITERS API GATEWAY CENTRAL
+framework:
+    rate_limiter:
+        # 🌐 GLOBAL GATEWAY
+        global_api_gateway:
+            policy: 'token_bucket'
+            limit: 50000
+            rate: { interval: '1 minute', amount: 2000 }
+            lock_factory: 'lock.redis.factory'
+            
+        authenticated_users:
+            policy: 'token_bucket'
+            limit: 10000
+            rate: { interval: '1 minute', amount: 500 }
+            lock_factory: 'lock.redis.factory'
+
+        # 🔀 MICROSERVICES ROUTING
+        user_api_routing:
+            policy: 'token_bucket'
+            limit: 8000
+            rate: { interval: '1 minute', amount: 400 }
+            lock_factory: 'lock.redis.factory'
+            
+        security_api_routing:
+            policy: 'token_bucket'
+            limit: 5000
+            rate: { interval: '1 minute', amount: 250 }
+            lock_factory: 'lock.redis.factory'
+
+        workflow_api_routing:
+            policy: 'token_bucket'
+            limit: 3000
+            rate: { interval: '1 minute', amount: 150 }
+            lock_factory: 'lock.redis.factory'
+            
+        analytics_api_routing:
+            policy: 'token_bucket'
+            limit: 2000
+            rate: { interval: '1 minute', amount: 100 }
+            lock_factory: 'lock.redis.factory'
+
+        billing_api_routing:
+            policy: 'token_bucket'
+            limit: 1000
+            rate: { interval: '1 minute', amount: 50 }
+            lock_factory: 'lock.redis.factory'
+            
+        messaging_api_routing:
+            policy: 'token_bucket'
+            limit: 15000
+            rate: { interval: '1 minute', amount: 750 }
+            lock_factory: 'lock.redis.factory'
+
+        content_api_routing:
+            policy: 'token_bucket'
+            limit: 6000
+            rate: { interval: '1 minute', amount: 300 }
+            lock_factory: 'lock.redis.factory'
+            
+        storage_api_routing:
+            policy: 'token_bucket'
+            limit: 4000
+            rate: { interval: '1 minute', amount: 200 }
+            lock_factory: 'lock.redis.factory'
+
+        # 🔄 CIRCUIT BREAKERS
+        circuit_breaker_activation:
+            policy: 'sliding_window'
+            limit: 100
+            interval: '5 minutes'
+            lock_factory: 'lock.redis.factory'
+            
+        failover_switches:
+            policy: 'sliding_window'
+            limit: 50
+            interval: '10 minutes'
+            lock_factory: 'lock.redis.factory'
+
+        # ⚖️ LOAD BALANCING
+        load_balancer_decisions:
+            policy: 'token_bucket'
+            limit: 100000
+            rate: { interval: '1 minute', amount: 5000 }
+            lock_factory: 'lock.redis.factory'
+            
+        health_checks:
+            policy: 'sliding_window'
+            limit: 1000
+            interval: '1 minute'
+            lock_factory: 'lock.redis.factory'
+
+        # 🔐 AUTHENTICATION
+        oauth2_token_requests:
+            policy: 'sliding_window'
+            limit: 1000
+            interval: '1 hour'
+            lock_factory: 'lock.redis.factory'
+            
+        jwt_validations:
+            policy: 'token_bucket'
+            limit: 20000
+            rate: { interval: '1 minute', amount: 1000 }
+            lock_factory: 'lock.redis.factory'
+
+        api_key_validations:
+            policy: 'token_bucket'
+            limit: 15000
+            rate: { interval: '1 minute', amount: 750 }
+            lock_factory: 'lock.redis.factory'
+
+        # 📊 MONITORING
+        metrics_collection:
+            policy: 'sliding_window'
+            limit: 10000
+            interval: '1 minute'
+            lock_factory: 'lock.redis.factory'
+            
+        performance_analytics:
+            policy: 'sliding_window'
+            limit: 500
+            interval: '10 minutes'
+            lock_factory: 'lock.redis.factory'
+
+        # 🚨 SECURITY
+        ddos_protection:
+            policy: 'sliding_window'
+            limit: 1000
+            interval: '1 minute'
+            lock_factory: 'lock.redis.factory'
+            
+        suspicious_activity:
+            policy: 'sliding_window'
+            limit: 50
+            interval: '15 minutes'
+            lock_factory: 'lock.redis.factory'
+
+        # 🔄 SERVICE DISCOVERY
+        service_registration:
+            policy: 'sliding_window'
+            limit: 100
+            interval: '1 hour'
+            lock_factory: 'lock.redis.factory'
+            
+        route_discovery:
+            policy: 'sliding_window'
+            limit: 1000
+            interval: '10 minutes'
+            lock_factory: 'lock.redis.factory'
+
+        # 🔐 ADMINISTRATIVE
+        admin_operations:
+            policy: 'sliding_window'
+            limit: 200
+            interval: '1 hour'
+            lock_factory: 'lock.redis.factory'
+            
+        gateway_configuration:
+            policy: 'sliding_window'
+            limit: 50
+            interval: '1 day'
+            lock_factory: 'lock.redis.factory'
+
+    cache:
+        pools:
+            cache.redis:
+                adapter: cache.adapter.redis
+                provider: 'redis://redis:6379'
+                default_lifetime: 3600 
